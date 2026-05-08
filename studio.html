@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layoutstudio SPACE · v0.1.0-alpha</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/app.css?v=0.1.0-alpha-device">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js" defer></script>
+    <script src="./src/app.js?v=0.1.0-alpha-final" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" async></script>
+    <script src="https://unpkg.com/lucide@latest" async onload="window.LayoutstudioRefreshIcons && window.LayoutstudioRefreshIcons()"></script>
+</head>
+<body>
+    <div class="page-grid-bg" aria-hidden="true"></div>
+
+    <nav class="nav-shell">
+        <div class="nav-inner">
+            <div class="nav-left-cluster">
+                <button type="button" class="brand-lockup" id="homeButton" aria-label="Layoutstudio 시작 화면">
+                    <span class="brand-word">Layout<span>studio</span></span>
+                    <span class="engine-mark">SPACE</span>
+                </button>
+                <div class="nav-context-panel">
+                    <p class="nav-workspace-label">Layoutstudio SPACE · v0.1.0-alpha</p>
+                    <p class="nav-subject-line">
+                        <span id="navProjectLabel">Workspace</span>
+                        <span id="navClockLabel" class="nav-clock-label">--:--</span>
+                    </p>
+                </div>
+            </div>
+
+            <div class="nav-action-cluster">
+                <a class="nav-landing-link" id="landingReturnButton" href="./index.html">랜딩 페이지</a>
+                <span id="saveStatusBadge" class="save-status-badge">로그인 필요</span>
+                <button type="button" class="nav-theme-pill" id="themeToggle" title="화면 모드 전환" aria-label="화면 모드 전환">
+                    <i data-lucide="sun" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="nav-circle-btn" id="authButton" title="계정" aria-label="계정">
+                    <i data-lucide="user" aria-hidden="true"></i>
+                </button>
+                <button type="button" class="nav-circle-btn profile-action" id="systemSettingsButton" title="시스템 설정" aria-label="시스템 설정">
+                    <i data-lucide="settings" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="app-viewport">
+        <section id="startView" class="view-section active">
+            <div class="start-shell">
+                <header class="start-header">
+                    <p class="kicker">Layoutstudio SPACE · v0.1.0-alpha</p>
+                    <h1>도면 위에서 실제 크기로 가구 배치를 설계하세요</h1>
+                    <p class="start-copy">도면 이미지를 불러오고, 기준 영역과 실제 크기를 맞춘 뒤 실측 그리드에서 가구 배치를 검토합니다.</p>
+                </header>
+
+                <div class="start-option-grid">
+                    <button type="button" class="start-option" id="newProjectButton">
+                        <span class="option-icon"><i data-lucide="image-plus" aria-hidden="true"></i></span>
+                        <span class="option-text">
+                            <strong>새 워크스페이스 만들기</strong>
+                            <small>워크스페이스 생성 마법사로 시작</small>
+                        </span>
+                    </button>
+                    <button type="button" class="start-option" id="importProjectButton">
+                        <span class="option-icon cyan"><i data-lucide="file-json" aria-hidden="true"></i></span>
+                        <span class="option-text">
+                            <strong>워크스페이스 파일 가져오기</strong>
+                            <small>저장한 JSON 파일 복원</small>
+                        </span>
+                    </button>
+                </div>
+
+                <section class="start-dashboard">
+                    <div class="dashboard-card">
+                        <div class="panel-head compact">
+                            <div>
+                                <p class="panel-kicker">Local Work</p>
+                                <h2 id="accountSummaryTitle">로컬 작업 안내</h2>
+                            </div>
+                            <button type="button" class="toolbar-btn" id="startAuthButton">
+                                <i data-lucide="user" aria-hidden="true"></i>
+                                <span>계정 관리</span>
+                            </button>
+                        </div>
+                        <p id="accountSummaryText" class="status-line">현재 알파 버전은 브라우저 임시 저장과 워크스페이스 파일 내보내기를 중심으로 동작합니다. 중요한 작업은 파일로 백업하세요.</p>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="panel-head compact">
+                            <div>
+                                <p class="panel-kicker">Workspaces</p>
+                                <h2>내 워크스페이스</h2>
+                            </div>
+                            <button type="button" class="toolbar-btn" id="refreshProjectsButton">
+                                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                                <span>새로고침</span>
+                            </button>
+                        </div>
+                        <div id="projectList" class="project-list"></div>
+                    </div>
+                </section>
+            </div>
+        </section>
+
+        <section id="studioView" class="view-section">
+            <header class="workspace-action-row">
+                <div>
+                    <p class="workspace-action-kicker">Layoutstudio SPACE · v0.1.0-alpha</p>
+                    <h2 class="workspace-action-title" id="projectTitle">새 워크스페이스</h2>
+                    <p class="workspace-action-status" id="projectSummary">워크스페이스 선택 전입니다.</p>
+                </div>
+                <div class="workspace-action-buttons">
+                    <button type="button" class="toolbar-btn" id="toolbarNewButton">
+                        <i data-lucide="image-plus" aria-hidden="true"></i>
+                        <span>새 워크스페이스</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" id="toolbarImportButton">
+                        <i data-lucide="folder-open" aria-hidden="true"></i>
+                        <span>불러오기</span>
+                    </button>
+                    <button type="button" class="toolbar-btn" id="projectSettingsButton">
+                        <i data-lucide="settings" aria-hidden="true"></i>
+                        <span>워크스페이스 설정</span>
+                    </button>
+                    <button type="button" class="toolbar-btn active-filter" id="toolbarExportButton">
+                        <i data-lucide="file-json" aria-hidden="true"></i>
+                        <span>JSON 내보내기</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="studio-grid">
+                <aside class="side-panel inventory-panel">
+                    <div class="panel-head">
+                        <div>
+                            <p class="panel-kicker">Inventory</p>
+                            <h3>가구 보관함</h3>
+                        </div>
+                        <button type="button" class="icon-add-btn" id="inventoryAddButton" aria-label="가구 추가">
+                            <i data-lucide="plus" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <div class="inventory-tools">
+                        <button type="button" class="toolbar-btn" id="addPresetButton">
+                            <i data-lucide="package-plus" aria-hidden="true"></i>
+                            <span>프리셋 추가</span>
+                        </button>
+                        <label class="search-field">
+                            <i data-lucide="search" aria-hidden="true"></i>
+                            <input id="inventorySearchInput" type="search" placeholder="가구 검색">
+                        </label>
+                    </div>
+                    <div id="inventoryList" class="inventory-list"></div>
+                </aside>
+
+                <section class="workspace-panel">
+                    <div class="canvas-topline">
+                        <div class="metric-row" id="metricRow"></div>
+                        <div class="workspace-tool-row">
+                            <button type="button" class="mini-icon-btn" id="zoomOutButton" title="축소" aria-label="축소"><i data-lucide="minus" aria-hidden="true"></i></button>
+                            <button type="button" class="mini-icon-btn" id="fitViewButton" title="화면 맞춤" aria-label="화면 맞춤"><i data-lucide="scan" aria-hidden="true"></i></button>
+                            <button type="button" class="mini-icon-btn" id="zoomInButton" title="확대" aria-label="확대"><i data-lucide="plus" aria-hidden="true"></i></button>
+                            <button type="button" class="mini-icon-btn" id="gridToggleButton" title="그리드 표시" aria-label="그리드 표시"><i data-lucide="grid-3x3" aria-hidden="true"></i></button>
+                            <button type="button" class="mini-icon-btn" id="referenceToggleButton" title="참조 도면 표시" aria-label="참조 도면 표시"><i data-lucide="layers" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div class="canvas-frame" id="canvasDropzone">
+                        <canvas id="workspaceCanvas"></canvas>
+                    </div>
+                    <div class="canvas-footerline">
+                        <span id="canvasStatus" class="canvas-status">워크스페이스 대기 중</span>
+                    </div>
+                </section>
+
+                <aside class="side-panel inspector-panel">
+                    <div class="tab-row" role="tablist" aria-label="속성 패널">
+                        <button type="button" class="tab-btn active" data-panel-tab="inspector">선택</button>
+                        <button type="button" class="tab-btn" data-panel-tab="floorplan">도면</button>
+                    </div>
+
+                    <section id="inspectorPanel" class="tab-panel active"></section>
+                    <section id="floorplanPanel" class="tab-panel"></section>
+                </aside>
+            </div>
+        </section>
+    </main>
+
+    <footer class="system-footer">
+        <div class="footer-identity">
+            <div class="footer-brand">ONE<span>STUDIO</span></div>
+            <div class="footer-product">
+                <strong>Layoutstudio SPACE</strong>
+                <span>Version v0.1.0-alpha</span>
+            </div>
+        </div>
+        <div class="footer-right-stack">
+            <p class="footer-copy">Copyright 2026 ONESTUDIO. All rights reserved.</p>
+            <div class="footer-links">
+                <button type="button" id="privacyButton">개인정보처리방침</button>
+                <button type="button" id="guideButton">이용 안내</button>
+                <button type="button" id="licenseButton">오픈소스 라이선스</button>
+                <button type="button" id="creatorInfoButton">제작자 정보</button>
+            </div>
+        </div>
+    </footer>
+
+    <div id="workspaceWizardModal" class="modal-backdrop wizard-backdrop" aria-hidden="true">
+        <section class="modal-panel wizard-panel" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+            <div class="modal-head">
+                <div>
+                    <p class="panel-kicker">Workspace Wizard</p>
+                    <h2 id="wizardTitle">워크스페이스 생성</h2>
+                </div>
+                <div class="wizard-head-actions">
+                    <button type="button" class="toolbar-btn wizard-secondary-btn" id="wizardBackButton">이전</button>
+                    <button type="button" class="toolbar-btn active-filter wizard-primary-btn" id="wizardNextButton">다음</button>
+                    <button type="button" class="nav-circle-btn" id="closeWizardButton" aria-label="닫기">
+                        <i data-lucide="x" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="wizardSteps" class="wizard-steps"></div>
+            <div id="wizardBody" class="wizard-body"></div>
+        </section>
+    </div>
+
+    <div id="furnitureModal" class="modal-backdrop" aria-hidden="true">
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="furnitureModalTitle">
+            <div class="modal-head">
+                <div>
+                    <p class="panel-kicker">Furniture</p>
+                    <h2 id="furnitureModalTitle">가구 스펙 정의</h2>
+                </div>
+                <button type="button" class="nav-circle-btn" id="closeFurnitureModalButton" aria-label="닫기">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <form id="furnitureForm" class="furniture-form">
+                <div class="furniture-name-color-row full">
+                    <label class="form-field">
+                        <span>가구 이름</span>
+                        <input id="furnitureNameInput" type="text" placeholder="예: 이케아 에케트 수납장" required>
+                    </label>
+                    <label class="furniture-color-chip" title="색상">
+                        <input id="furnitureColorInput" type="color" value="#2563eb" aria-label="가구 색상">
+                    </label>
+                </div>
+                <label class="form-field">
+                    <span>가구 종류</span>
+                    <select id="furnitureCategoryInput" required>
+                        <option value="desk">책상</option>
+                        <option value="chair">의자</option>
+                        <option value="storage">수납장</option>
+                        <option value="shelf">선반</option>
+                        <option value="sofa">소파</option>
+                        <option value="bed">침대</option>
+                        <option value="table">테이블</option>
+                        <option value="other">기타</option>
+                    </select>
+                </label>
+                <label class="form-field" id="customCategoryField">
+                    <span>기타 종류명</span>
+                    <input id="furnitureCustomCategoryInput" type="text" placeholder="예: 파티션">
+                </label>
+                <label class="form-field">
+                    <span>제조사명(선택)</span>
+                    <input id="furnitureManufacturerInput" type="text" placeholder="예: IKEA">
+                </label>
+                <label class="form-field">
+                    <span>모델명(선택)</span>
+                    <input id="furnitureModelInput" type="text" placeholder="예: EKET">
+                </label>
+                <label class="form-field">
+                    <span>가로 W(mm)</span>
+                    <input id="furnitureWidthInput" type="number" min="1" step="1" placeholder="1200" required>
+                </label>
+                <label class="form-field">
+                    <span>세로 D(mm)</span>
+                    <input id="furnitureDepthInput" type="number" min="1" step="1" placeholder="450" required>
+                </label>
+                <label class="form-field">
+                    <span>높이 H(mm)</span>
+                    <input id="furnitureHeightInput" type="number" min="0" step="1" placeholder="900">
+                </label>
+                <label class="form-field full">
+                    <span>메모</span>
+                    <textarea id="furnitureMemoInput" placeholder="구매처, 모델명, 배치 메모"></textarea>
+                </label>
+                <div class="modal-actions full">
+                    <button type="button" class="toolbar-btn" id="cancelFurnitureButton">취소</button>
+                    <button type="submit" class="toolbar-btn active-filter" id="saveFurnitureButton">
+                        <i data-lucide="package-plus" aria-hidden="true"></i>
+                        <span>저장</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div id="projectSettingsModal" class="modal-backdrop" aria-hidden="true">
+        <section class="modal-panel settings-modal-panel" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+            <div class="modal-head">
+                <div>
+                    <p class="panel-kicker">Workspace Settings</p>
+                    <h2 id="settingsModalTitle">워크스페이스 설정</h2>
+                </div>
+                <button type="button" class="nav-circle-btn" id="closeSettingsButton" aria-label="닫기">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <form id="settingsForm" class="settings-form"></form>
+        </section>
+    </div>
+
+    <div id="authModal" class="modal-backdrop" aria-hidden="true">
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+            <div class="modal-head">
+                <div>
+                    <p class="panel-kicker">Account</p>
+                    <h2 id="authModalTitle">이메일 계정</h2>
+                </div>
+                <button type="button" class="nav-circle-btn" id="closeAuthButton" aria-label="닫기">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div id="authBody"></div>
+        </section>
+    </div>
+
+    <div id="confirmModal" class="modal-backdrop" aria-hidden="true">
+        <section class="modal-panel confirm-panel" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <div class="modal-head">
+                <div>
+                    <p class="panel-kicker">Confirm</p>
+                    <h2 id="confirmTitle">확인</h2>
+                </div>
+            </div>
+            <div id="confirmMessage" class="status-line"></div>
+            <div id="confirmActions" class="modal-actions confirm-actions"></div>
+        </section>
+    </div>
+
+    <input id="projectInput" type="file" accept="application/json,.json" hidden>
+
+</body>
+</html>

@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layoutstudio SPACE · v0.1.0-alpha</title>
+    <meta name="description" content="도면 이미지를 실측 기준으로 보정하고 가구 배치를 검토하는 ONE STUDIO의 공간 배치 시뮬레이터입니다.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles/landing.css?v=260508-device">
+
+    <style id="landing-final-polish">
+        /* Layoutstudio landing-only polish: mock floorplan, guide demo, creator/contact/support balance */
+        .mock-floorplan {
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+            height: clamp(350px, 42vw, 430px) !important;
+            border-radius: 30px !important;
+            border: 1px solid rgba(148, 163, 184, .32) !important;
+            background:
+                linear-gradient(rgba(47, 111, 237, .07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(47, 111, 237, .07) 1px, transparent 1px),
+                radial-gradient(circle at 20% 10%, rgba(47, 111, 237, .07), transparent 32%),
+                #fbfdff !important;
+            background-size: 32px 32px, 32px 32px, auto, auto !important;
+            box-shadow: inset 0 0 0 12px rgba(255,255,255,.62), inset 0 0 0 13px rgba(148,163,184,.18), 0 22px 50px rgba(15,23,42,.08);
+        }
+        .mock-floorplan::before {
+            content: "";
+            position: absolute;
+            inset: 34px 34px 34px 34px;
+            border: 3px solid rgba(71, 85, 105, .34);
+            border-radius: 24px;
+            background: rgba(255,255,255,.2);
+            box-shadow: 0 18px 48px rgba(15,23,42,.07);
+            pointer-events: none;
+            z-index: 1;
+        }
+        .mock-floorplan::after {
+            content: "";
+            position: absolute;
+            left: 34px;
+            top: 34px;
+            width: calc(100% - 68px);
+            height: calc(100% - 68px);
+            background:
+                linear-gradient(90deg, transparent 0 58%, rgba(100,116,139,.18) 58% calc(58% + 2px), transparent calc(58% + 2px)),
+                linear-gradient(transparent 0 45%, rgba(100,116,139,.15) 45% calc(45% + 2px), transparent calc(45% + 2px)),
+                linear-gradient(transparent 0 38%, rgba(100,116,139,.13) 38% calc(38% + 2px), transparent calc(38% + 2px)),
+                linear-gradient(transparent 0 69%, rgba(100,116,139,.13) 69% calc(69% + 2px), transparent calc(69% + 2px));
+            border-radius: 22px;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .mock-floorplan .room {
+            position: absolute !important;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: .45rem;
+            border-radius: 22px !important;
+            border: 1px solid rgba(100,116,139,.32) !important;
+            background: rgba(255,255,255,.82) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 12px 26px rgba(15,23,42,.055) !important;
+            color: #0f172a !important;
+            font-weight: 900;
+            z-index: 2;
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
+        }
+        .mock-floorplan .room:hover {
+            transform: translateY(-2px);
+            border-color: rgba(47,111,237,.45) !important;
+            background: rgba(255,255,255,.94) !important;
+            box-shadow: 0 18px 38px rgba(47,111,237,.12) !important;
+        }
+        .mock-floorplan .room span { color: #64748b !important; font-size: clamp(.58rem, .9vw, .74rem); font-weight: 900; line-height: 1.2; }
+        .room-living { left: 7.5% !important; top: 12% !important; width: 47% !important; height: 32% !important; }
+        .room-bed { left: 7.5% !important; top: 44% !important; width: 47% !important; height: 42% !important; }
+        .room-kitchen { left: 54.5% !important; top: 12% !important; width: 33% !important; height: 28% !important; }
+        .room-bath { left: 54.5% !important; top: 40% !important; width: 33% !important; height: 22% !important; }
+        .room-entry { left: 54.5% !important; top: 62% !important; width: 33% !important; height: 24% !important; }
+        .mock-floorplan .furniture {
+            z-index: 5;
+            cursor: grab;
+            user-select: none;
+            box-shadow: 0 14px 30px rgba(47,111,237,.26);
+            transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+        }
+        .mock-floorplan .furniture:hover { transform: translateY(-2px) scale(1.02); filter: saturate(1.08); }
+        .mock-floorplan .furniture.dragging { cursor: grabbing; transform: scale(1.04); box-shadow: 0 18px 42px rgba(15,23,42,.24); }
+        .furniture-desk { left: 13.5% !important; top: 18.5% !important; width: 128px !important; height: 54px !important; }
+        .furniture-shelf { left: 21% !important; top: 68% !important; width: 74px !important; height: 76px !important; background: #0ea5a1 !important; }
+        .metric-strip span { transition: transform .2s ease, background .2s ease, color .2s ease, box-shadow .2s ease; }
+        .metric-strip span:hover { transform: translateY(-3px); background: #fff; color: var(--blue); box-shadow: 0 16px 34px rgba(47,111,237,.12); }
+
+        .how-to-use-section .use-step-grid { margin-bottom: 1rem; }
+        .use-step-card { cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, background .2s ease; }
+        .use-step-card:hover, .use-step-card.is-active { transform: translateY(-4px); border-color: rgba(47,111,237,.42); box-shadow: 0 18px 36px rgba(47,111,237,.12); background: rgba(255,255,255,.96); }
+        .use-demo-panel {
+            position: relative;
+            min-height: 250px;
+            border: 1px solid rgba(148,163,184,.28);
+            border-radius: 28px;
+            background: #fff;
+            overflow: hidden;
+            box-shadow: 0 20px 54px rgba(15,23,42,.07);
+        }
+        .use-demo-default, .use-demo-screen { position: absolute; inset: 0; transition: opacity .28s ease, transform .28s ease, filter .28s ease; }
+        .use-demo-default { display: grid; place-items: center; align-content: center; gap: .35rem; color: #0f172a; }
+        .use-demo-default strong { font-size: clamp(1.6rem, 3vw, 2.35rem); font-weight: 950; letter-spacing: -.05em; }
+        .use-demo-default span { color: #64748b; font-weight: 900; }
+        .use-demo-screen { opacity: 0; transform: translateY(14px); filter: blur(6px); pointer-events: none; padding: 24px; background: linear-gradient(135deg, #f8fbff, #fff); }
+        .use-demo-panel[data-active-step="1"] .use-demo-step-1,
+        .use-demo-panel[data-active-step="2"] .use-demo-step-2,
+        .use-demo-panel[data-active-step="3"] .use-demo-step-3,
+        .use-demo-panel[data-active-step="4"] .use-demo-step-4 { opacity: 1; transform: translateY(0); filter: blur(0); }
+        .use-demo-panel[data-active-step="1"] .use-demo-default,
+        .use-demo-panel[data-active-step="2"] .use-demo-default,
+        .use-demo-panel[data-active-step="3"] .use-demo-default,
+        .use-demo-panel[data-active-step="4"] .use-demo-default { opacity: 0; transform: scale(.96); filter: blur(8px); }
+        .demo-window-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; color: #64748b; font-weight: 900; }
+        .demo-window-head strong { color: #0f172a; }
+        .demo-upload-card, .demo-form-row, .demo-furniture-row, .demo-save-card {
+            border: 1px solid rgba(148,163,184,.26); border-radius: 18px; background: #fff; padding: 14px 16px; box-shadow: 0 10px 22px rgba(15,23,42,.055);
+        }
+        .demo-upload-card { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+        .demo-upload-card i { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 14px; background: #eaf2ff; color: #2f6fed; font-style: normal; font-weight: 950; }
+        .demo-upload-card small, .demo-form-row span, .demo-furniture-row small, .demo-save-card span { color: #64748b; font-weight: 800; }
+        .demo-form-row { display: flex; justify-content: space-between; margin-top: 10px; }
+        .demo-chip-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .demo-chip-row span { padding: 10px 14px; border-radius: 999px; background: #eff6ff; color: #2f6fed; font-weight: 900; }
+        .demo-furniture-row { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 10px; margin-top: 10px; }
+        .demo-furniture-row i { width: 14px; height: 14px; border-radius: 999px; background: #2f6fed; }
+        .demo-furniture-row.teal i { background: #0ea5a1; }
+        .demo-plan-mini { position: relative; height: 174px; border-radius: 20px; overflow: hidden; border: 1px solid rgba(148,163,184,.25); background: linear-gradient(rgba(47,111,237,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(47,111,237,.12) 1px, transparent 1px), #fff; background-size: 28px 28px; }
+        .demo-grid-label { position: absolute; left: 14px; top: 10px; color: #2f6fed; font-weight: 900; font-size: .78rem; }
+        .demo-room, .demo-item { position: absolute; display: grid; place-items: center; border-radius: 14px; font-weight: 900; }
+        .demo-room { border: 1px solid rgba(100,116,139,.22); background: rgba(255,255,255,.82); color: #334155; }
+        .demo-room.a { left: 40px; top: 34px; width: 46%; height: 54px; }
+        .demo-room.b { left: 40px; top: 94px; width: 46%; height: 60px; }
+        .demo-item { background: #2f6fed; color: white; height: 34px; padding: 0 16px; box-shadow: 0 12px 24px rgba(47,111,237,.22); }
+        .demo-item.desk { left: 160px; top: 48px; }
+        .demo-item.shelf { left: 280px; top: 112px; background: #0ea5a1; }
+        .demo-save-card { margin-top: 12px; display: flex; justify-content: space-between; align-items: center; }
+        .demo-save-card.primary { background: #eff6ff; color: #1d4ed8; }
+
+        .studio-info-stack { gap: 16px !important; }
+        .dev-info-card > p:not(.eyebrow), .dev-info-card h3 { max-width: none !important; width: 100%; }
+        .tech-pill-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+        .studio-contact-support-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 16px; align-items: stretch; }
+        .contact-mail-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .mail-card { min-height: 54px !important; padding: 10px 12px !important; display: grid !important; grid-template-columns: 30px 1fr 34px; align-items: center; gap: 8px; }
+        .mail-card strong { font-size: clamp(.72rem, .95vw, .84rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mail-icon, .mail-send-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 999px; background: #f1f5f9; color: #2f6fed; text-decoration: none; font-weight: 950; }
+        .mail-send-icon:hover { background: #2f6fed; color: #fff; transform: translateY(-1px); }
+        .pay-button.kakao { min-height: 54px !important; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+        .pay-badge { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 999px; background: rgba(60,30,30,.13); color: #3c1e1e; font-size: .68rem; font-weight: 950; }
+        .join-card h2 { letter-spacing: -.05em; }
+        @media (max-width: 980px) { .studio-contact-support-row, .tech-pill-grid { grid-template-columns: 1fr; } .contact-mail-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 760px) { .use-demo-panel { min-height: 300px; } .mock-floorplan { height: 340px !important; } .furniture-desk { width: 92px !important; height: 42px !important; } .furniture-shelf { width: 58px !important; height: 64px !important; } }
+
+
+        /* 2605081947 landing-only final correction */
+        .panel-topline strong {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 2rem;
+            padding: 0 .85rem;
+            border-radius: 999px;
+            border: 1px solid rgba(47,111,237,.26);
+            background: rgba(47,111,237,.08);
+            color: var(--blue);
+            font-size: clamp(.62rem, .92vw, .86rem);
+            letter-spacing: .02em;
+            white-space: nowrap;
+        }
+        .mock-floorplan {
+            display: block;
+            height: clamp(350px, 40vw, 430px) !important;
+            padding: 0 !important;
+        }
+        .mock-floorplan::before {
+            inset: 9% 8% 10% 8% !important;
+            border: 3px solid rgba(71,85,105,.28) !important;
+            border-radius: 28px !important;
+            background: rgba(255,255,255,.32) !important;
+            box-shadow: 0 24px 56px rgba(47,111,237,.07) !important;
+        }
+        .mock-floorplan::after { display: none !important; }
+        .mock-floorplan .room {
+            border-radius: 0 !important;
+            border: 1px solid rgba(100,116,139,.28) !important;
+            background: linear-gradient(145deg, rgba(255,255,255,.97), rgba(248,251,255,.9)) !important;
+            backdrop-filter: blur(8px);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.95) !important;
+        }
+        .room-living {
+            left: 8% !important;
+            top: 9% !important;
+            width: 49.3% !important;
+            height: 35.65% !important;
+            border-top-left-radius: 26px !important;
+        }
+        .room-bed {
+            left: 8% !important;
+            top: 44.65% !important;
+            width: 49.3% !important;
+            height: 43.35% !important;
+            border-bottom-left-radius: 26px !important;
+        }
+        .room-kitchen {
+            left: 57.3% !important;
+            top: 9% !important;
+            width: 34.7% !important;
+            height: 30.65% !important;
+            border-top-right-radius: 26px !important;
+        }
+        .room-bath {
+            left: 57.3% !important;
+            top: 39.65% !important;
+            width: 34.7% !important;
+            height: 24.2% !important;
+        }
+        .room-entry {
+            left: 57.3% !important;
+            top: 63.85% !important;
+            width: 34.7% !important;
+            height: 24.15% !important;
+            border-bottom-right-radius: 26px !important;
+        }
+        .mock-floorplan .room:hover {
+            transform: none !important;
+            background: linear-gradient(145deg, #fff, #f7fbff) !important;
+            border-color: rgba(47,111,237,.35) !important;
+            z-index: 4;
+        }
+        .furniture-desk {
+            left: 17% !important;
+            top: 17% !important;
+            width: 112px !important;
+            height: 48px !important;
+            border-radius: 18px !important;
+        }
+        .furniture-shelf {
+            left: 17% !important;
+            top: 73% !important;
+            width: 68px !important;
+            height: 68px !important;
+            border-radius: 18px !important;
+        }
+        .mock-floorplan .furniture::after {
+            content: "drag";
+            position: absolute;
+            right: -10px;
+            top: -10px;
+            opacity: 0;
+            padding: 3px 7px;
+            border-radius: 999px;
+            background: rgba(15,23,42,.82);
+            color: white;
+            font-size: .55rem;
+            font-weight: 900;
+            transition: opacity .16s ease, transform .16s ease;
+            transform: translateY(4px);
+        }
+        .mock-floorplan .furniture:hover::after,
+        .mock-floorplan .furniture.dragging::after {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .demo-default-logo {
+            display: inline-flex;
+            align-items: center;
+            gap: .04em;
+            letter-spacing: -.045em !important;
+        }
+        .demo-default-logo span { color: var(--blue); }
+        .demo-default-logo em {
+            margin-left: .45rem;
+            padding: .22rem .55rem;
+            border-radius: 999px;
+            border: 1px solid rgba(47,111,237,.18);
+            background: rgba(47,111,237,.07);
+            color: var(--blue);
+            font-style: normal;
+            font-size: .62rem;
+            letter-spacing: .08em;
+        }
+        .demo-version-pill {
+            display: inline-flex;
+            align-items: center;
+            width: max-content;
+            margin: .2rem auto 0;
+            padding: .28rem .68rem;
+            border-radius: 999px;
+            border: 1px solid rgba(148,163,184,.22);
+            background: #f8fafc;
+            color: #64748b !important;
+            font-size: .72rem;
+        }
+        .use-demo-panel { min-height: 320px; }
+        .use-demo-screen {
+            display: grid;
+            place-items: center;
+            padding: 20px !important;
+        }
+        .demo-preview-shell {
+            width: min(100%, 720px);
+            min-height: 220px;
+            border-radius: 24px;
+            border: 1px solid rgba(148,163,184,.26);
+            background: rgba(255,255,255,.92);
+            box-shadow: 0 22px 48px rgba(15,23,42,.08);
+            padding: 18px;
+            overflow: hidden;
+        }
+        .demo-crop-preview {
+            position: relative;
+            height: 138px;
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid rgba(148,163,184,.25);
+            background: #eef4ff;
+        }
+        .demo-blueprint-bg {
+            position: absolute;
+            inset: 12px 20px;
+            border: 2px solid rgba(15,23,42,.36);
+            background:
+                linear-gradient(90deg, transparent 0 48%, rgba(15,23,42,.24) 48% 49%, transparent 49%),
+                linear-gradient(transparent 0 52%, rgba(15,23,42,.24) 52% 53%, transparent 53%),
+                rgba(255,255,255,.55);
+        }
+        .demo-crop-box {
+            position: absolute;
+            left: 54px;
+            top: 28px;
+            width: 72%;
+            height: 72px;
+            border: 2px solid #2f6fed;
+            border-radius: 10px;
+            animation: cropPulse 2.6s ease-in-out infinite;
+        }
+        .demo-crop-box i { position: absolute; width: 10px; height: 10px; border-radius: 50%; background: #2f6fed; }
+        .demo-crop-box i:nth-child(1) { left: -5px; top: -5px; }
+        .demo-crop-box i:nth-child(2) { right: -5px; top: -5px; }
+        .demo-crop-box i:nth-child(3) { right: -5px; bottom: -5px; }
+        .demo-crop-box i:nth-child(4) { left: -5px; bottom: -5px; }
+        .demo-loupe { position: absolute; right: 24px; top: 20px; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #2f6fed; font-weight: 950; box-shadow: 0 8px 18px rgba(47,111,237,.2); animation: floatLoupe 2.4s ease-in-out infinite; }
+        .demo-mini-fields { display: flex; gap: 10px; margin-top: 12px; }
+        .demo-mini-fields span { flex: 1; padding: 10px 12px; border-radius: 14px; background: #f8fafc; color: #64748b; font-weight: 900; }
+        .demo-input-line { display: grid; grid-template-columns: auto 1fr 18px; gap: 10px; align-items: center; padding: 14px; border: 1px solid rgba(148,163,184,.25); border-radius: 16px; background: #fff; }
+        .demo-input-line b { color: #64748b; }
+        .typing-text::after { content: "|"; color: #2f6fed; animation: blinkCaret .8s steps(2,end) infinite; }
+        .demo-input-line i { width: 18px; height: 18px; border-radius: 6px; background: #2f6fed; }
+        .demo-input-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 12px 0; }
+        .demo-input-grid span { padding: 12px; border-radius: 14px; background: #f8fafc; color: #0f172a; font-weight: 900; text-align: center; }
+        .demo-chip-row.compact { margin-top: 6px; }
+        .demo-chip-row.compact span { padding: 8px 12px; font-size: .8rem; }
+        .demo-plan-mini { height: 190px; }
+        .demo-item.desk { animation: moveDesk 3s ease-in-out infinite; }
+        .demo-item.shelf { animation: moveShelf 3s ease-in-out infinite; }
+        .demo-rotate-ring { position: absolute; right: 24px; bottom: 20px; width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: #fff; color: #2f6fed; font-weight: 950; box-shadow: 0 10px 24px rgba(47,111,237,.14); animation: rotateHint 2.5s linear infinite; }
+        .demo-download-button { width: 100%; min-height: 56px; margin: 14px 0 10px; border: 0; border-radius: 18px; background: #2f6fed; color: white; font-weight: 950; box-shadow: 0 16px 30px rgba(47,111,237,.22); animation: downloadPulse 2.2s ease-in-out infinite; }
+        .demo-save-card.primary { background: #f8fafc; }
+        .contact-mail-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            gap: 10px !important;
+        }
+        .contact-mail-grid .mail-card {
+            min-height: 54px !important;
+            padding: 10px 12px !important;
+            display: grid !important;
+            grid-template-columns: 28px minmax(0,1fr) 32px !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+        .mail-card strong { font-size: .76rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mail-card small { font-size: .62rem; }
+        .mail-icon, .mail-send-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 10px; }
+        .mail-send-icon { background: #eff6ff; color: #2f6fed; text-decoration: none; font-weight: 950; }
+        .dev-info-card > p:not(.eyebrow) { max-width: none !important; width: 100% !important; }
+        .tech-pill-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .join-card { margin: 0; }
+        .join-card h2 { max-width: 12em; }
+        @keyframes cropPulse { 0%,100% { transform: translateX(0); } 50% { transform: translateX(12px); } }
+        @keyframes floatLoupe { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-14px,10px); } }
+        @keyframes blinkCaret { 50% { opacity: 0; } }
+        @keyframes moveDesk { 0%,100% { transform: translate(0,0); } 50% { transform: translate(32px,10px) rotate(4deg); } }
+        @keyframes moveShelf { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-16px,-12px) rotate(-6deg); } }
+        @keyframes rotateHint { to { transform: rotate(360deg); } }
+        @keyframes downloadPulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        @media (max-width: 760px) {
+            .contact-mail-grid, .tech-pill-grid, .demo-input-grid { grid-template-columns: 1fr !important; }
+            .mock-floorplan { height: 350px !important; }
+            .panel-topline strong { font-size: .58rem; padding-inline: .5rem; }
+            .room-living, .room-bed { left: 8% !important; width: 49.3% !important; }
+            .room-kitchen, .room-bath, .room-entry { left: 57.3% !important; width: 34.7% !important; }
+            .mock-floorplan .room span { font-size: .54rem; }
+        }
+
+
+        /* 2605082006 final landing motion patch */
+        html { scroll-behavior: smooth; }
+        .mock-flow {
+            display: grid !important;
+            place-items: center;
+            padding: 22px !important;
+            min-height: clamp(350px, 40vw, 430px) !important;
+        }
+        .mock-flow::before {
+            inset: 22px !important;
+            border-radius: 28px !important;
+            border: 1px solid rgba(148,163,184,.24) !important;
+            background:
+                linear-gradient(rgba(47,111,237,.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(47,111,237,.06) 1px, transparent 1px),
+                rgba(255,255,255,.68) !important;
+            background-size: 28px 28px, 28px 28px, auto !important;
+            box-shadow: inset 0 0 0 10px rgba(255,255,255,.46), 0 20px 46px rgba(15,23,42,.08) !important;
+        }
+        .mock-flow .room,
+        .mock-flow .furniture { display: none !important; }
+        .hero-flow-scene {
+            position: absolute;
+            inset: 54px 46px 48px;
+            z-index: 3;
+            opacity: 0;
+            transform: translateY(18px) scale(.985);
+            filter: blur(8px);
+            pointer-events: none;
+            animation: heroSceneLoop 20s ease-in-out infinite;
+        }
+        .hero-flow-step-1 { animation-delay: 0s; }
+        .hero-flow-step-2 { animation-delay: 5s; }
+        .hero-flow-step-3 { animation-delay: 10s; }
+        .hero-flow-step-4 { animation-delay: 15s; }
+        .hero-flow-label { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+        .hero-flow-label span { color: var(--blue); font-weight: 950; letter-spacing: .12em; font-size: .72rem; }
+        .hero-flow-label strong { color: #0f172a; font-weight: 950; }
+        .hero-mini-window,
+        .hero-form-demo,
+        .hero-grid-demo,
+        .hero-backup-demo {
+            position: relative;
+            min-height: 220px;
+            border: 1px solid rgba(148,163,184,.28);
+            border-radius: 24px;
+            background: rgba(255,255,255,.9);
+            box-shadow: 0 18px 42px rgba(15,23,42,.08);
+            overflow: hidden;
+        }
+        .hero-mini-window.upload { min-height: 76px; display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+        .hero-file-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 16px; background: #eff6ff; color: var(--blue); font-weight: 950; }
+        .hero-mini-window b { display: block; font-weight: 950; color: #0f172a; }
+        .hero-mini-window small { color: #64748b; font-weight: 800; }
+        .hero-crop-demo { position: absolute; left: 50px; right: 50px; bottom: 48px; height: 134px; border-radius: 22px; background: linear-gradient(90deg,rgba(15,23,42,.18) 1px,transparent 1px), linear-gradient(rgba(15,23,42,.18) 1px,transparent 1px), rgba(239,246,255,.85); background-size: 42px 42px; border: 1px solid rgba(148,163,184,.22); overflow: hidden; }
+        .hero-crop-demo span { position: absolute; left: 38px; top: 30px; width: 70%; height: 72px; border-radius: 14px; border: 2px solid var(--blue); background: rgba(255,255,255,.5); animation: heroCropMove 5s ease-in-out infinite; }
+        .hero-crop-demo i { position: absolute; width: 11px; height: 11px; border-radius: 50%; background: var(--blue); animation: heroCropMove 5s ease-in-out infinite; }
+        .hero-crop-demo i:nth-child(2){left:33px;top:25px}.hero-crop-demo i:nth-child(3){right:54px;top:25px}.hero-crop-demo i:nth-child(4){right:54px;top:97px}.hero-crop-demo i:nth-child(5){left:33px;top:97px}
+        .hero-form-demo { padding: 22px; }
+        .hero-input { border: 1px solid rgba(148,163,184,.28); border-radius: 16px; padding: 14px 16px; font-weight: 950; color: #0f172a; background: #fff; }
+        .hero-input.typing::after { content: '|'; color: var(--blue); animation: blinkCaret .8s steps(2,end) infinite; }
+        .hero-size-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 14px 0; }
+        .hero-size-row span { padding: 12px; border-radius: 14px; background: #f8fafc; color: #64748b; font-weight: 900; text-align: center; }
+        .hero-form-demo button, .hero-backup-demo button { border: 0; border-radius: 18px; min-height: 50px; padding: 0 18px; background: var(--blue); color: #fff; font-weight: 950; box-shadow: 0 16px 30px rgba(47,111,237,.22); }
+        .hero-form-demo button { animation: heroButtonPress 5s ease-in-out infinite; }
+        .hero-cursor { position: absolute; right: 60px; bottom: 44px; color: #0f172a; font-style: normal; font-size: 1.55rem; font-weight: 950; animation: heroCursorClick 5s ease-in-out infinite; }
+        .hero-grid-demo { background: linear-gradient(rgba(47,111,237,.1) 1px,transparent 1px), linear-gradient(90deg,rgba(47,111,237,.1) 1px,transparent 1px), #fff; background-size: 28px 28px; }
+        .hero-room, .hero-furniture { position: absolute; display: grid; place-items: center; font-weight: 950; border-radius: 18px; }
+        .hero-room { border: 1px solid rgba(148,163,184,.28); background: rgba(255,255,255,.86); color: #334155; }
+        .hero-room.living { left: 34px; top: 32px; width: 45%; height: 72px; }
+        .hero-room.bed { left: 34px; bottom: 32px; width: 45%; height: 86px; }
+        .hero-room.bath { right: 34px; top: 54px; width: 34%; height: 116px; }
+        .hero-furniture { color: white; min-width: 68px; height: 36px; padding: 0 12px; box-shadow: 0 12px 26px rgba(47,111,237,.2); }
+        .hero-furniture.desk { left: 120px; top: 54px; background: var(--blue); animation: heroFloatA 5s ease-in-out infinite; }
+        .hero-furniture.shelf { left: 208px; bottom: 66px; background: #0ea5a1; animation: heroFloatB 5s ease-in-out infinite; }
+        .hero-furniture.bed-f { right: 68px; bottom: 58px; background: #be123c; animation: heroFloatC 5s ease-in-out infinite; }
+        .hero-rotate { position: absolute; right: 40px; bottom: 32px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: var(--blue); font-weight: 950; box-shadow: 0 10px 24px rgba(47,111,237,.14); animation: rotateHint 3.5s linear infinite; }
+        .hero-backup-demo { display: grid; place-items: center; padding: 26px; }
+        .hero-status-line { width: min(100%,360px); display: flex; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 16px; background: #f8fafc; color: #64748b; font-weight: 900; }
+        .hero-status-line b { color: #0f172a; }
+        .hero-check { position: absolute; width: 82px; height: 82px; display: grid; place-items: center; border-radius: 50%; background: var(--blue); color: #fff; font-size: 2.4rem; font-weight: 950; opacity: 0; transform: scale(.5); animation: heroCheckPop 5s ease-in-out infinite; }
+        .hero-flow-dots { position: absolute; z-index: 6; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 7px; }
+        .hero-flow-dots span { width: 7px; height: 7px; border-radius: 999px; background: rgba(47,111,237,.22); animation: heroDotLoop 20s ease-in-out infinite; }
+        .hero-flow-dots span:nth-child(2){animation-delay:5s}.hero-flow-dots span:nth-child(3){animation-delay:10s}.hero-flow-dots span:nth-child(4){animation-delay:15s}
+        .use-demo-panel.is-loading .use-demo-progress span { animation: useLoadingFill .68s ease forwards; }
+        .use-demo-progress { position: absolute; z-index: 10; left: 24px; right: 24px; top: 18px; height: 4px; border-radius: 999px; background: rgba(148,163,184,.16); overflow: hidden; opacity: 0; transition: opacity .18s ease; }
+        .use-demo-progress span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), #60a5fa); }
+        .use-demo-panel.is-loading .use-demo-progress { opacity: 1; }
+        .use-demo-screen, .use-demo-default { transition-duration: .56s !important; }
+        .demo-idle-hint { color: #94a3b8; font-weight: 800; margin-top: .35rem; }
+        .demo-mini-fields.four { display: grid; grid-template-columns: repeat(4,1fr); }
+        .demo-room-box { position: absolute; border: 1px solid rgba(15,23,42,.22); background: rgba(255,255,255,.46); border-radius: 8px; }
+        .demo-room-box.r1{left:36px;top:28px;width:90px;height:58px}.demo-room-box.r2{left:130px;top:28px;width:110px;height:58px}.demo-room-box.r3{left:36px;top:90px;width:120px;height:50px}.demo-room-box.r4{left:160px;top:90px;width:84px;height:50px}
+        .demo-add-row { position: relative; display: flex; justify-content: flex-end; margin: 10px 0 6px; }
+        .demo-add-row button { min-height: 42px; border: 0; border-radius: 14px; background: var(--blue); color: white; font-weight: 950; padding: 0 18px; animation: addPress 3.2s ease-in-out infinite; }
+        .demo-cursor { position: absolute; right: 22px; top: 26px; color: #0f172a; font-size: 1.4rem; font-weight: 950; font-style: normal; animation: addCursor 3.2s ease-in-out infinite; }
+        .demo-plan-mini.richer .demo-room.c { right: 42px; top: 34px; width: 26%; height: 118px; }
+        .demo-plan-mini.richer .demo-room.a { width: 38%; height: 62px; }
+        .demo-plan-mini.richer .demo-room.b { width: 38%; height: 72px; top: 106px; }
+        .demo-item.chair { left: 96px; top: 112px; background: #7c3aed; animation: moveChair 3.4s ease-in-out infinite; }
+        .demo-item.beditem { left: 56px; top: 134px; background: #be123c; animation: moveBed 3.8s ease-in-out infinite; }
+        .demo-export-cursor { position: absolute; left: 54%; top: 53%; color: #0f172a; font-style: normal; font-size: 1.6rem; font-weight: 950; animation: exportCursor 3s ease-in-out infinite; }
+        .demo-check-burst { position: absolute; left: 50%; top: 54%; width: 76px; height: 76px; margin-left: -38px; margin-top: -38px; display: grid; place-items: center; border-radius: 999px; background: var(--blue); color: white; font-size: 2.1rem; font-weight: 950; opacity: 0; transform: scale(.55); animation: checkBurst 3s ease-in-out infinite; box-shadow: 0 18px 42px rgba(47,111,237,.25); }
+        .history-chain { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 18px; color: #64748b; }
+        .history-chain span { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 999px; border: 1px solid rgba(148,163,184,.22); background: rgba(255,255,255,.8); }
+        .history-chain b { color: #0f172a; font-weight: 950; }
+        .history-chain em { font-style: normal; font-weight: 850; font-size: .82rem; }
+        .history-chain i { width: 24px; height: 1px; background: rgba(47,111,237,.35); }
+        .history-chain .future { color: var(--blue); background: rgba(47,111,237,.07); }
+        .start-now-section { padding-top: 24px; }
+        .start-now-card { position: relative; overflow: hidden; display: grid; justify-items: center; text-align: center; gap: 14px; padding: clamp(42px, 6vw, 76px) 24px; border-radius: 34px; border: 1px solid rgba(148,163,184,.22); background: radial-gradient(circle at 50% 0%, rgba(47,111,237,.16), transparent 34%), linear-gradient(135deg, #fff, #f8fbff); box-shadow: 0 24px 70px rgba(15,23,42,.08); }
+        .start-now-card::before { content: ''; position: absolute; inset: -40%; background: conic-gradient(from 90deg, transparent, rgba(47,111,237,.12), transparent, rgba(14,165,161,.1), transparent); animation: ctaGlow 8s linear infinite; opacity: .85; }
+        .start-now-card > * { position: relative; z-index: 1; }
+        .start-now-card h2 { margin: 0; font-size: clamp(2.1rem, 5vw, 4.4rem); letter-spacing: -.06em; line-height: 1.02; color: #0f172a; }
+        .start-now-card p:not(.eyebrow) { max-width: 640px; margin: 0; color: #64748b; font-weight: 800; line-height: 1.7; }
+        @keyframes heroSceneLoop { 0%,4%{opacity:0;transform:translateY(18px) scale(.985);filter:blur(8px)} 8%,22%{opacity:1;transform:translateY(0) scale(1);filter:blur(0)} 26%,100%{opacity:0;transform:translateY(-16px) scale(.99);filter:blur(8px)} }
+        @keyframes heroDotLoop { 0%,4%,26%,100%{background:rgba(47,111,237,.22);width:7px} 8%,22%{background:var(--blue);width:22px} }
+        @keyframes heroCropMove { 0%,100%{transform:translateX(0)} 50%{transform:translateX(16px)} }
+        @keyframes heroButtonPress { 0%,42%,100%{transform:translateY(0)} 50%{transform:translateY(2px) scale(.98)} }
+        @keyframes heroCursorClick { 0%{transform:translate(-70px,-34px)} 45%{transform:translate(0,0)} 52%{transform:translate(0,0) scale(.92)} 100%{transform:translate(-70px,-34px)} }
+        @keyframes heroFloatA { 50%{transform:translate(26px,10px)} }
+        @keyframes heroFloatB { 50%{transform:translate(-16px,-12px) rotate(-5deg)} }
+        @keyframes heroFloatC { 50%{transform:translate(-24px,8px) rotate(4deg)} }
+        @keyframes heroCheckPop { 0%,44%,80%,100%{opacity:0;transform:scale(.55)} 52%,70%{opacity:1;transform:scale(1)} }
+        @keyframes useLoadingFill { to { width: 100%; } }
+        @keyframes addCursor { 0%{transform:translate(-160px,-98px)} 55%{transform:translate(0,0)} 70%{transform:translate(0,0) scale(.9)} 100%{transform:translate(-160px,-98px)} }
+        @keyframes addPress { 0%,58%,100%{transform:translateY(0)} 68%{transform:translateY(2px) scale(.98)} }
+        @keyframes moveChair { 50%{transform:translate(26px,-8px)} }
+        @keyframes moveBed { 50%{transform:translate(36px,4px) rotate(3deg)} }
+        @keyframes exportCursor { 0%{transform:translate(-140px,-70px)} 46%{transform:translate(0,0)} 58%{transform:translate(0,0) scale(.9)} 100%{transform:translate(-140px,-70px)} }
+        @keyframes checkBurst { 0%,48%,88%,100%{opacity:0;transform:scale(.55)} 60%,76%{opacity:1;transform:scale(1)} }
+        @keyframes ctaGlow { to { transform: rotate(360deg); } }
+        @media (max-width: 760px) { .hero-flow-scene { inset: 48px 30px 44px; } .hero-room.living,.hero-room.bed{left:22px;width:42%}.hero-room.bath{right:22px;width:36%}.hero-furniture.desk{left:80px}.hero-furniture.shelf{left:140px}.hero-furniture.bed-f{right:36px}.demo-mini-fields.four,.hero-size-row{grid-template-columns:1fr 1fr}.history-chain i{display:none} }
+
+
+
+        /* 2605082026 final micro-tuning: slower motion, cursor style, Step preview cleanup, Next Step timeline */
+        .hero-flow-scene { animation-duration: 40s !important; }
+        .hero-flow-step-1 { animation-delay: 0s !important; }
+        .hero-flow-step-2 { animation-delay: 10s !important; }
+        .hero-flow-step-3 { animation-delay: 20s !important; }
+        .hero-flow-step-4 { animation-delay: 30s !important; }
+        .hero-flow-dots {
+            bottom: 34px !important;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,.72);
+            border: 1px solid rgba(148,163,184,.18);
+            box-shadow: 0 8px 22px rgba(15,23,42,.08);
+        }
+        .hero-flow-dots span { animation-duration: 40s !important; }
+        .hero-flow-dots span:nth-child(2) { animation-delay: 10s !important; }
+        .hero-flow-dots span:nth-child(3) { animation-delay: 20s !important; }
+        .hero-flow-dots span:nth-child(4) { animation-delay: 30s !important; }
+        .hero-crop-demo span,
+        .hero-crop-demo i,
+        .hero-form-demo button,
+        .hero-cursor,
+        .hero-furniture.desk,
+        .hero-furniture.shelf,
+        .hero-furniture.bed-f,
+        .hero-check { animation-duration: 10s !important; }
+        .demo-crop-box,
+        .demo-loupe,
+        .demo-item.desk,
+        .demo-item.shelf { animation-duration: 6s !important; }
+        .demo-add-row button,
+        .demo-cursor,
+        .demo-export-cursor,
+        .demo-check-burst { animation-duration: 6.4s !important; }
+        .demo-download-button { animation-duration: 4.4s !important; }
+        .demo-item.chair { animation-duration: 6.8s !important; }
+        .demo-item.beditem { animation-duration: 7.6s !important; }
+        .use-demo-panel.is-loading .use-demo-progress span { animation-duration: 1.35s !important; }
+        .use-demo-screen, .use-demo-default { transition-duration: .88s !important; }
+        .hero-cursor,
+        .demo-cursor,
+        .demo-export-cursor {
+            color: #fff !important;
+            -webkit-text-stroke: 1.35px #0f172a;
+            text-shadow: 0 2px 0 rgba(15,23,42,.85), 0 8px 18px rgba(15,23,42,.22);
+            filter: drop-shadow(0 6px 10px rgba(15,23,42,.18));
+        }
+        .demo-crop-preview {
+            height: 150px !important;
+            background: linear-gradient(135deg,#eef5ff,#f8fbff) !important;
+        }
+        .demo-blueprint-bg {
+            inset: 24px 34px !important;
+            border: 2px solid rgba(15,23,42,.34) !important;
+            border-radius: 12px;
+            background:
+                linear-gradient(90deg, transparent 0 49%, rgba(15,23,42,.22) 49% 50%, transparent 50%),
+                linear-gradient(transparent 0 51%, rgba(15,23,42,.22) 51% 52%, transparent 52%),
+                rgba(255,255,255,.58) !important;
+        }
+        .demo-room-box { border-color: rgba(15,23,42,.18) !important; background: rgba(255,255,255,.5) !important; }
+        .demo-room-box.r1 { left: 52px !important; top: 44px !important; width: 120px !important; height: 42px !important; }
+        .demo-room-box.r2 { left: 180px !important; top: 44px !important; width: 140px !important; height: 42px !important; }
+        .demo-room-box.r3 { left: 52px !important; top: 92px !important; width: 112px !important; height: 36px !important; }
+        .demo-room-box.r4 { left: 172px !important; top: 92px !important; width: 128px !important; height: 36px !important; }
+        .demo-crop-box {
+            left: 70px !important;
+            right: 70px !important;
+            width: auto !important;
+            top: 54px !important;
+            height: 58px !important;
+            border-radius: 12px !important;
+            animation-name: cropPulseSmall !important;
+        }
+        .demo-crop-box i:nth-child(1) { left: -5px !important; top: -5px !important; }
+        .demo-crop-box i:nth-child(2) { right: -5px !important; top: -5px !important; }
+        .demo-crop-box i:nth-child(3) { right: -5px !important; bottom: -5px !important; }
+        .demo-crop-box i:nth-child(4) { left: -5px !important; bottom: -5px !important; }
+        .demo-loupe { right: 38px !important; top: 42px !important; }
+        .save-preview {
+            position: relative;
+            isolation: isolate;
+        }
+        .save-preview::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 5;
+            border-radius: inherit;
+            background: rgba(248,250,252,.46);
+            opacity: 0;
+            backdrop-filter: blur(3px);
+            animation: saveSoftBlur 6.4s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .save-preview .demo-check-burst { z-index: 6; }
+        .project-track-head { align-items: flex-start !important; text-align: left !important; }
+        .project-track-head .roadmap-title-wrap { justify-items: start !important; align-items: start !important; width: 100%; }
+        .project-track-head .roadmap-title-row { justify-content: flex-start !important; }
+        .history-chain {
+            width: 100%;
+            justify-content: flex-start !important;
+            gap: 12px !important;
+        }
+        .history-chain span {
+            gap: 9px !important;
+            padding: 10px 14px !important;
+        }
+        .history-chain em {
+            order: 0;
+            color: var(--blue) !important;
+            font-weight: 950 !important;
+            font-size: .88rem !important;
+        }
+        .history-chain b {
+            order: 1;
+            color: #334155 !important;
+            font-weight: 900 !important;
+        }
+        .history-chain .future {
+            min-width: 56px;
+            justify-content: center;
+        }
+        .history-chain .future em { font-size: 1rem !important; letter-spacing: .12em; }
+        @keyframes cropPulseSmall { 0%,100% { transform: translateX(0); } 50% { transform: translateX(8px); } }
+        @keyframes saveSoftBlur { 0%,46%,84%,100% { opacity:0; } 56%,74% { opacity:1; } }
+        @media (max-width: 760px) {
+            .demo-room-box.r1 { width: 78px !important; }
+            .demo-room-box.r2 { left: 138px !important; width: 84px !important; }
+            .demo-room-box.r3 { width: 74px !important; }
+            .demo-room-box.r4 { left: 132px !important; width: 86px !important; }
+            .demo-crop-box { left: 54px !important; right: 54px !important; }
+            .hero-flow-dots { bottom: 26px !important; }
+        }
+
+
+        /* 2605082040 final landing micro patch: faster loop, flatter mock panel, Step1 reuse, creator layout */
+        .mock-flow::before {
+            display: none !important;
+        }
+        .mock-flow {
+            background:
+                linear-gradient(rgba(47,111,237,.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(47,111,237,.07) 1px, transparent 1px),
+                radial-gradient(circle at 22% 0%, rgba(47,111,237,.08), transparent 42%),
+                rgba(255,255,255,.74) !important;
+            background-size: 32px 32px, 32px 32px, auto, auto !important;
+            box-shadow: inset 0 0 0 1px rgba(148,163,184,.18), 0 22px 52px rgba(15,23,42,.07) !important;
+        }
+        .hero-flow-scene {
+            inset: 46px 42px 58px !important;
+            animation-duration: 20s !important;
+        }
+        .hero-flow-step-1 { animation-delay: 0s !important; }
+        .hero-flow-step-2 { animation-delay: 5s !important; }
+        .hero-flow-step-3 { animation-delay: 10s !important; }
+        .hero-flow-step-4 { animation-delay: 15s !important; }
+        .hero-flow-dots {
+            bottom: 20px !important;
+            z-index: 12 !important;
+        }
+        .hero-flow-dots span { animation-duration: 20s !important; }
+        .hero-flow-dots span:nth-child(2) { animation-delay: 5s !important; }
+        .hero-flow-dots span:nth-child(3) { animation-delay: 10s !important; }
+        .hero-flow-dots span:nth-child(4) { animation-delay: 15s !important; }
+        .hero-crop-demo span,
+        .hero-crop-demo i,
+        .hero-form-demo button,
+        .hero-cursor,
+        .hero-furniture.desk,
+        .hero-furniture.shelf,
+        .hero-furniture.bed-f,
+        .hero-check { animation-duration: 5s !important; }
+        .hero-form-demo,
+        .hero-backup-demo,
+        .hero-grid-demo {
+            box-shadow: 0 12px 34px rgba(15,23,42,.055) !important;
+        }
+        .hero-backup-demo::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            opacity: 0;
+            pointer-events: none;
+            background: rgba(255,255,255,.52);
+            backdrop-filter: blur(5px);
+            animation: heroBackupBlur 5s ease-in-out infinite;
+        }
+        .hero-backup-demo > * { position: relative; z-index: 1; }
+        .hero-backup-demo .hero-check { z-index: 3; }
+        @keyframes heroBackupBlur {
+            0%, 50%, 86%, 100% { opacity: 0; }
+            60%, 78% { opacity: 1; }
+        }
+
+        .use-demo-panel.is-loading .use-demo-progress span { animation-duration: .55s !important; }
+        .use-demo-screen, .use-demo-default { transition-duration: .44s !important; }
+        .demo-crop-box,
+        .demo-loupe,
+        .demo-item.desk,
+        .demo-item.shelf { animation-duration: 3s !important; }
+        .demo-add-row button,
+        .demo-cursor,
+        .demo-export-cursor,
+        .demo-check-burst { animation-duration: 3.2s !important; }
+        .demo-download-button { animation-duration: 2.2s !important; }
+        .demo-item.chair { animation-duration: 3.4s !important; }
+        .demo-item.beditem { animation-duration: 3.8s !important; }
+
+        .demo-hero-step-one {
+            width: min(100%, 720px);
+            min-height: 220px;
+            border-radius: 24px;
+            border: 1px solid rgba(148,163,184,.26);
+            background:
+                linear-gradient(rgba(47,111,237,.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(47,111,237,.08) 1px, transparent 1px),
+                #fff;
+            background-size: 28px 28px, 28px 28px, auto;
+            box-shadow: 0 22px 48px rgba(15,23,42,.08);
+            padding: 18px;
+            overflow: hidden;
+        }
+        .demo-hero-step-one .hero-mini-window.upload {
+            position: relative !important;
+            min-height: 68px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,.92);
+            border: 1px solid rgba(148,163,184,.24);
+            box-shadow: 0 10px 22px rgba(15,23,42,.05);
+        }
+        .demo-hero-step-one .hero-crop-demo {
+            position: relative !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            height: 124px !important;
+            border-radius: 18px !important;
+            margin-top: 0;
+        }
+        .demo-hero-step-one .hero-crop-demo span {
+            left: 12% !important;
+            top: 30px !important;
+            width: 72% !important;
+            height: 58px !important;
+        }
+        .demo-hero-step-one .hero-crop-demo i:nth-child(2){left:calc(12% - 5px) !important; top:25px !important;}
+        .demo-hero-step-one .hero-crop-demo i:nth-child(3){right:calc(16% - 5px) !important; top:25px !important;}
+        .demo-hero-step-one .hero-crop-demo i:nth-child(4){right:calc(16% - 5px) !important; top:83px !important;}
+        .demo-hero-step-one .hero-crop-demo i:nth-child(5){left:calc(12% - 5px) !important; top:83px !important;}
+        .demo-hero-step-one .demo-mini-fields.four {
+            margin-top: 12px;
+        }
+        .demo-check-burst {
+            z-index: 5;
+        }
+        .save-preview::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            opacity: 0;
+            pointer-events: none;
+            background: rgba(255,255,255,.54);
+            backdrop-filter: blur(5px);
+            animation: demoSaveBlur 3.2s ease-in-out infinite;
+            z-index: 3;
+        }
+        @keyframes demoSaveBlur {
+            0%, 48%, 88%, 100% { opacity: 0; }
+            60%, 76% { opacity: 1; }
+        }
+        .creator-studio { display: none !important; }
+        .creator-name-line {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .creator-name-stack {
+            display: inline-grid !important;
+            gap: 2px;
+            vertical-align: middle;
+            color: #64748b !important;
+            font-size: 1rem !important;
+            letter-spacing: 0 !important;
+            line-height: 1.1;
+        }
+        .creator-name-stack b {
+            color: var(--blue);
+            font-size: .72rem;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+        .creator-name-stack em {
+            color: #64748b;
+            font-style: normal;
+            font-size: .96rem;
+            font-weight: 900;
+        }
+        @media (max-width: 760px) {
+            .hero-flow-scene { inset: 44px 28px 56px !important; }
+            .demo-hero-step-one { padding: 14px; }
+            .creator-name-line { gap: 8px; }
+        }
+
+    </style>
+    <style id="device-optimization-overrides">
+        @media (min-width: 1600px) {
+            .hero-section {
+                grid-template-columns: minmax(0, 640px) minmax(520px, 560px) !important;
+                justify-content: center !important;
+                gap: 108px !important;
+            }
+
+            .hero-copy,
+            .hero-copy h1 {
+                max-width: 640px !important;
+            }
+
+            .hero-copy h1 {
+                font-size: clamp(4rem, 4vw, 4.8rem) !important;
+                line-height: 1.08 !important;
+                overflow-wrap: anywhere;
+            }
+
+            .hero-copy h1 span {
+                white-space: normal !important;
+            }
+        }
+    </style>
+
+</head>
+<body>
+    <div class="pointer-glow" aria-hidden="true"></div>
+    <header class="site-header">
+        <a class="brand" href="#top" aria-label="Layoutstudio home">
+            <span class="brand-word">Layout<span>studio</span></span>
+            <span class="engine-mark">SPACE</span>
+        </a>
+        <nav class="site-nav" aria-label="랜딩 페이지 메뉴">
+            <a href="#features">기능</a>
+            <a href="#structure">구조</a>
+            <a href="#how-to-use">이용 방법</a>
+            <a href="#roadmap">다음 단계</a>
+            <a href="#creator">ONE STUDIO</a>
+            <a href="#support">문의</a>
+            <a href="#join">Join Us</a>
+        </nav>
+        <div class="header-actions">
+            <a class="ghost-btn" href="#support">후원하기</a>
+            <a class="primary-btn" href="./studio.html">Studio 입장</a>
+        </div>
+    </header>
+
+    <main id="top">
+        <section class="hero-section">
+            <div class="hero-copy">
+                <p class="eyebrow">REAL-SCALE SPACE PLANNING</p>
+                <h1><span>도면을 실측 공간으로,</span><span>가구 배치는 현실적으로.</span></h1>
+                <p class="hero-description">Layoutstudio는 도면 이미지를 참조 레이어로 불러오고, 기준 영역과 실제 크기를 맞춘 뒤 가구 배치를 검토하는 공간 배치 시뮬레이터입니다.</p>
+                <div class="hero-actions">
+                    <a class="primary-btn large" href="./studio.html">Studio 입장하기</a>
+                    <a class="secondary-btn large" href="#features">기능 살펴보기</a>
+                </div>
+                <p class="hero-note">dev 알파 버전입니다. 오류·데이터 손실 가능성이 있으니 중요한 작업은 JSON으로 백업하세요.</p>
+            </div>
+            <div class="hero-panel" aria-label="Layoutstudio 요약">
+                <div class="panel-topline">
+                    <span>Layoutstudio</span>
+                    <strong>SPACE ENGINE · v0.1.0-alpha</strong>
+                </div>
+                <div class="mock-floorplan mock-flow" id="mockFloorplan">
+                    <div class="hero-flow-scene hero-flow-step-1">
+                        <div class="hero-flow-label"><span>STEP 1</span><strong>도면 업로드</strong></div>
+                        <div class="hero-mini-window upload">
+                            <div class="hero-file-icon">IMG</div>
+                            <div><b>IMG_5461.JPG</b><small>기준 영역을 잡는 중</small></div>
+                        </div>
+                        <div class="hero-crop-demo"><span></span><i></i><i></i><i></i><i></i></div>
+                    </div>
+                    <div class="hero-flow-scene hero-flow-step-2">
+                        <div class="hero-flow-label"><span>STEP 2</span><strong>가구 보관함</strong></div>
+                        <div class="hero-form-demo">
+                            <div class="hero-input typing">수납장</div>
+                            <div class="hero-size-row"><span>1200mm</span><span>450mm</span><span>900mm</span></div>
+                            <button type="button">가구 추가</button>
+                            <em class="hero-cursor">↖</em>
+                        </div>
+                    </div>
+                    <div class="hero-flow-scene hero-flow-step-3">
+                        <div class="hero-flow-label"><span>STEP 3</span><strong>실측 배치</strong></div>
+                        <div class="hero-grid-demo">
+                            <div class="hero-room living">거실</div>
+                            <div class="hero-room bed">침실</div>
+                            <div class="hero-room bath">욕실</div>
+                            <div class="hero-furniture desk">책상</div>
+                            <div class="hero-furniture shelf">수납장</div>
+                            <div class="hero-furniture bed-f">침대</div>
+                            <div class="hero-rotate">↻</div>
+                        </div>
+                    </div>
+                    <div class="hero-flow-scene hero-flow-step-4">
+                        <div class="hero-flow-label"><span>STEP 4</span><strong>저장과 백업</strong></div>
+                        <div class="hero-backup-demo">
+                            <div class="hero-status-line"><b>자동 저장 완료</b><small>LocalStorage</small></div>
+                            <button type="button">JSON 내보내기</button>
+                            <div class="hero-check">✓</div>
+                        </div>
+                    </div>
+                    <div class="hero-flow-dots"><span></span><span></span><span></span><span></span></div>
+                </div>
+                <div class="metric-strip">
+                    <span>실측 그리드</span>
+                    <span>참조 도면</span>
+                    <span>가구 보관함</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="content-section">
+            <div class="section-head">
+                <p class="eyebrow">Features</p>
+                <h2>알파 버전에서 바로 확인할 수 있는 기능</h2>
+            </div>
+            <div class="feature-grid">
+                <article class="info-card"><span class="card-number">01</span><h3>도면 기준 영역 보정</h3><p>도면 이미지 전체가 아니라 실제 배치에 사용할 기준 영역을 맞춰 실측 워크스페이스와 연결합니다.</p></article>
+                <article class="info-card"><span class="card-number">02</span><h3>실측 그리드와 단위 관리</h3><p>내부 데이터는 mm 기준으로 정리하고, 사용자는 가구 크기와 배치 위치를 실측 단위로 검토합니다.</p></article>
+                <article class="info-card"><span class="card-number">03</span><h3>가구 보관함과 배치 편집</h3><p>프리셋 또는 직접 입력한 가구를 관리하고, 도면 위에서 위치, 크기, 회전을 조정합니다.</p></article>
+                <article class="info-card"><span class="card-number">04</span><h3>로컬 저장과 파일 백업</h3><p>현재 버전은 브라우저 임시 저장과 JSON 내보내기/가져오기를 중심으로 알파 테스트할 수 있습니다.</p></article>
+            </div>
+        </section>
+
+        <section id="structure" class="content-section split-section">
+            <div>
+                <p class="eyebrow">Structure</p>
+                <h2>개념은 단순하게 유지합니다</h2>
+                <p class="section-copy">Layoutstudio는 사용자가 이해하기 쉽도록 저장 단위를 워크스페이스로 통합하고 그 안에서 도면과 가구를 관리합니다.</p>
+            </div>
+            <div class="concept-stack">
+                <div class="concept-row"><strong>Workspace</strong><span>집, 방, 사무실 같은 하나의 저장 단위</span></div>
+                <div class="concept-row"><strong>Floorplan</strong><span>워크스페이스 안에 들어가는 도면 또는 방별 도면</span></div>
+                <div class="concept-row"><strong>Furniture Library</strong><span>배치 전 가구 원본과 프리셋 보관함</span></div>
+                <div class="concept-row"><strong>Placed Furniture</strong><span>도면 위에 실제로 배치된 가구 객체</span></div>
+            </div>
+        </section>
+
+        <section id="how-to-use" class="content-section how-to-use-section">
+            <div class="section-head">
+                <p class="eyebrow">How to Use</p>
+                <h2>이용 방법</h2>
+            </div>
+            <div class="use-step-grid" id="useStepGrid">
+                <article class="use-step-card" data-demo-step="1"><span>Step 1</span><h3>워크스페이스 생성</h3><p>도면 이미지를 첨부하고, 실제 크기와 기준 영역을 맞춥니다.</p></article>
+                <article class="use-step-card" data-demo-step="2"><span>Step 2</span><h3>가구 보관함 구성</h3><p>기본 프리셋을 선택하거나 직접 가구 크기를 입력해 보관함을 만듭니다.</p></article>
+                <article class="use-step-card" data-demo-step="3"><span>Step 3</span><h3>마음껏 배치</h3><p>가구를 도면 위로 꺼내 배치하고, 위치와 회전을 자유롭게 조정합니다.</p></article>
+                <article class="use-step-card" data-demo-step="4"><span>Step 4</span><h3>저장과 백업</h3><p>작업 결과는 로컬에 저장하고, 중요한 작업은 JSON 파일로 백업합니다.</p></article>
+            </div>
+            <div class="use-demo-panel" id="useDemoPanel" data-active-step="0" aria-live="polite">
+                <div class="use-demo-progress" aria-hidden="true"><span></span></div>
+                <div class="use-demo-default">
+                    <strong class="demo-default-logo"><span>Layout</span>studio <em>SPACE</em></strong>
+                    <span class="demo-version-pill">Version v0.1.0-alpha</span>
+                    <small class="demo-idle-hint">단계 카드에 마우스를 올리면 예시 화면이 열립니다.</small>
+                </div>
+                <div class="use-demo-screen use-demo-step-1">
+                    <div class="demo-hero-step-one">
+                        <div class="demo-window-head"><span>Workspace Wizard</span><strong>기준 영역 보정</strong></div>
+                        <div class="hero-mini-window upload">
+                            <div class="hero-file-icon">IMG</div>
+                            <div><b>IMG_5461.JPG</b><small>기준 영역을 잡는 중</small></div>
+                        </div>
+                        <div class="hero-crop-demo"><span></span><i></i><i></i><i></i><i></i></div>
+                        <div class="demo-mini-fields four"><span>도면명</span><span>가로 11500</span><span>세로 6900</span><span>그리드 500</span></div>
+                    </div>
+                </div>
+                <div class="use-demo-screen use-demo-step-2">
+                    <div class="demo-preview-shell library-preview">
+                        <div class="demo-window-head"><span>Furniture Library</span><strong>가구 추가</strong></div>
+                        <div class="demo-input-line"><b>가구명</b><span class="typing-text">수납장</span><i></i></div>
+                        <div class="demo-input-grid"><span>가로 1200mm</span><span>세로 450mm</span><span>높이 900mm</span></div>
+                        <div class="demo-add-row"><button type="button">가구 추가</button><em class="demo-cursor">↖</em></div>
+                        <div class="demo-chip-row compact"><span>책상</span><span>의자</span><span>수납장</span><span>침대</span></div>
+                    </div>
+                </div>
+                <div class="use-demo-screen use-demo-step-3">
+                    <div class="demo-preview-shell place-preview">
+                        <div class="demo-window-head"><span>Workspace</span><strong>가구 배치</strong></div>
+                        <div class="demo-plan-mini richer">
+                            <span class="demo-grid-label">1m</span>
+                            <div class="demo-room a">거실</div>
+                            <div class="demo-room b">침실</div>
+                            <div class="demo-room c">주방</div>
+                            <div class="demo-item desk">책상</div>
+                            <div class="demo-item shelf">수납장</div>
+                            <div class="demo-item chair">의자</div>
+                            <div class="demo-item beditem">침대</div>
+                            <div class="demo-rotate-ring">↻</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="use-demo-screen use-demo-step-4">
+                    <div class="demo-preview-shell save-preview">
+                        <div class="demo-window-head"><span>Backup</span><strong>저장과 백업</strong></div>
+                        <div class="demo-save-card"><b>자동 저장 완료</b><span>브라우저 LocalStorage</span></div>
+                        <button type="button" class="demo-download-button">JSON 내보내기</button>
+                        <em class="demo-export-cursor">↖</em>
+                        <div class="demo-check-burst">✓</div>
+                        <small>중요한 작업은 파일로 한 번 더 백업하세요.</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="roadmap" class="content-section project-track-section">
+            <div class="section-head roadmap-head project-track-head">
+                <div class="roadmap-title-wrap">
+                    <p class="eyebrow">Next Step</p>
+                    <div class="roadmap-title-row">
+                        <h2>다음 단계</h2>
+                    </div>
+                    <div class="history-chain" aria-label="프로젝트 연혁">
+                        <span><em>5월 2일(토)</em><b>기획</b></span>
+                        <i></i>
+                        <span><em>5월 5일(화)</em><b>개발 시작</b></span>
+                        <i></i>
+                        <span><em>5월 8일(금)</em><b>v0.1.0-alpha 배포</b></span>
+                        <i></i>
+                        <span class="future"><em>...</em></span>
+                    </div>
+                </div>
+            </div>
+            <div class="roadmap-grid roadmap-expanded">
+                <article class="roadmap-card active"><span>NOW</span><h3>v0.1.0-alpha</h3><p>도면 업로드, 기준 영역 보정, 실측 그리드, 가구 보관함, JSON 저장 기반의 개인용 알파 버전입니다.</p></article>
+                <article class="roadmap-card"><span>BETA</span><h3>계정과 DB 저장</h3><p>Supabase Auth/DB, 사용자별 워크스페이스 저장, 자동 저장, 주소 입력 기반 도면 생성 초석을 연결합니다.</p></article>
+                <article class="roadmap-card"><span>MULTI</span><h3>공동 작업과 멀티플레이</h3><p>사용자 초대, 권한 설정, 작업 내역, 복구 지점, 실시간 공동 편집 흐름을 확장합니다.</p></article>
+                <article class="roadmap-card"><span>CATALOG</span><h3>판매 중인 가구 검색</h3><p>제조사와 모델명을 기반으로 실제 판매 중인 가구 크기를 가져와 보관함에 추가하는 기능을 목표로 합니다.</p></article>
+                <article class="roadmap-card"><span>3D</span><h3>공간 둘러보기</h3><p>2D 배치 결과를 바탕으로 3D 시점에서 방을 둘러보고 동선과 배치감을 확인하는 최종 목표를 둡니다.</p></article>
+                <article class="roadmap-card"><span>SCAN</span><h3>모바일 공간 스캔</h3><p>휴대폰으로 방을 스캔하고 실제 공간 치수를 보정해 도면 구성의 출발점으로 활용하는 흐름을 검토합니다.</p></article>
+            </div>
+        </section>
+
+        <section id="creator" class="content-section creator-lab-section">
+            <div class="section-head">
+                <p class="eyebrow">ONE STUDIO</p>
+                <h2>개발자 정보</h2>
+            </div>
+            <div class="studio-info-stack">
+                <article class="creator-card">
+                    <a class="creator-github-btn" href="#" aria-label="GitHub 링크 자리"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.24c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49 0-.24-.01-1.03-.01-1.87-2.78.62-3.37-1.22-3.37-1.22-.46-1.2-1.11-1.52-1.11-1.52-.91-.64.07-.63.07-.63 1 .08 1.53 1.06 1.53 1.06.89 1.57 2.34 1.12 2.91.86.09-.67.35-1.12.63-1.37-2.22-.26-4.55-1.15-4.55-5.12 0-1.13.39-2.06 1.03-2.79-.1-.26-.45-1.31.1-2.72 0 0 .84-.28 2.75 1.07A9.2 9.2 0 0 1 12 6.85c.85 0 1.71.12 2.51.35 1.91-1.35 2.75-1.07 2.75-1.07.55 1.41.2 2.46.1 2.72.64.73 1.03 1.66 1.03 2.79 0 3.98-2.34 4.85-4.57 5.11.36.32.68.95.68 1.92 0 1.38-.01 2.49-.01 2.83 0 .27.18.6.69.49A10.28 10.28 0 0 0 22 12.24C22 6.58 17.52 2 12 2Z"/></svg></a>
+                    <div class="creator-profile-row">
+                        <div class="creator-avatar creator-avatar-photo">
+                            <img src="./assets/IMG_8847.png" alt="" onerror="this.hidden=true; this.nextElementSibling.hidden=false;">
+                            <span hidden>YS</span>
+                        </div>
+                        <div class="creator-card-body">
+                            <p class="creator-kicker">CREATOR</p>
+                            <p class="creator-studio">ONE STUDIO</p>
+                            <h2 class="creator-name-line">용석희 <span class="creator-name-stack"><b>ONE STUDIO</b><em>YONG Seokhee</em></span></h2>
+                            <p class="creator-school">연세대학교 미래캠퍼스 소프트웨어학부 24학번<br><strong>YONSEI University MIRAE CAMPUS SW '24</strong></p>
+                        </div>
+                    </div>
+                    <p class="creator-message">이번 프로젝트는 집 안 가구 배치를 고민하다가 답답함을 느껴 밤새 만들기 시작했습니다. 누구나 손쉽게 배치를 바꿔보고 마음껏 실험하며 자신에게 맞는 공간을 찾아갈 수 있기를 바랍니다. ONE STUDIO와 Layoutstudio의 여정에 함께해 주셔서 감사합니다.</p>
+                </article>
+                <article class="dev-info-card">
+                    <p class="eyebrow">Development</p>
+                    <h3>개발 정보</h3>
+                    <p>Layoutstudio는 ONE STUDIO의 프로젝트입니다. 개발 과정에서 오픈소스를 참고했고, OpenAI ChatGPT와 Codex를 보조 도구로 활용했습니다.</p>
+                    <div class="tech-pill-grid" aria-label="개발 정보">
+                        <span><i>JS</i><strong>HTML / CSS / JavaScript</strong></span>
+                        <span><i>2D</i><strong>Fabric.js</strong></span>
+                        <span><i>AI</i><strong>OpenAI ChatGPT</strong></span>
+                        <span><i>CX</i><strong>OpenAI Codex</strong></span>
+                        <span><i>OS</i><strong>Open Source References</strong></span>
+                    </div>
+                </article><div class="studio-contact-support-row">
+                    <article id="support" class="support-card contact-card compact-box">
+                        <p class="eyebrow">Contact</p>
+                        <h2>문의 & 버그 신고</h2>
+                        <p class="support-copy">협업 문의나 소중한 의견은 모두 감사히 받겠습니다.<br>학교 구성원은 학교 메일로, 외부 방문객은 개인 메일로 보내주시면 확인하겠습니다.</p>
+                        <div class="contact-mail-grid">
+                            <div class="mail-card">
+                                <span class="mail-icon" aria-hidden="true">✉</span>
+                                <div><small>YONSEI</small><strong>yong6330@yonsei.ac.kr</strong></div>
+                                <a class="mail-send-icon" href="mailto:yong6330@yonsei.ac.kr?subject=Layoutstudio%20%EB%AC%B8%EC%9D%98%20%EB%B0%8F%20%EB%B2%84%EA%B7%B8%20%EC%8B%A0%EA%B3%A0&body=%EB%B2%84%EA%B7%B8%20%EB%82%B4%EC%9A%A9%3A%0A%EB%B0%9C%EC%83%9D%20%ED%99%94%EB%A9%B4%3A%0A%EC%82%AC%EC%9A%A9%20%EA%B8%B0%EA%B8%B0%3A%0A%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80%3A%0A%EC%9E%AC%ED%98%84%20%EB%B0%A9%EB%B2%95%3A%0A%EC%B2%A8%EB%B6%80%20%EA%B0%80%EB%8A%A5%20%EC%9E%90%EB%A3%8C%3A" aria-label="YONSEI 메일 보내기">↗</a>
+                            </div>
+                            <div class="mail-card">
+                                <span class="mail-icon" aria-hidden="true">✉</span>
+                                <div><small>ONE STUDIO</small><strong>yong6330@onestudio.kr</strong></div>
+                                <a class="mail-send-icon" href="mailto:yong6330@onestudio.kr?subject=Layoutstudio%20%EB%AC%B8%EC%9D%98%20%EB%B0%8F%20%EB%B2%84%EA%B7%B8%20%EC%8B%A0%EA%B3%A0&body=%EB%B2%84%EA%B7%B8%20%EB%82%B4%EC%9A%A9%3A%0A%EB%B0%9C%EC%83%9D%20%ED%99%94%EB%A9%B4%3A%0A%EC%82%AC%EC%9A%A9%20%EA%B8%B0%EA%B8%B0%3A%0A%EB%B8%8C%EB%9D%BC%EC%9A%B0%EC%A0%80%3A%0A%EC%9E%AC%ED%98%84%20%EB%B0%A9%EB%B2%95%3A%0A%EC%B2%A8%EB%B6%80%20%EA%B0%80%EB%8A%A5%20%EC%9E%90%EB%A3%8C%3A" aria-label="ONE STUDIO 메일 보내기">↗</a>
+                            </div>
+                        </div>
+                    </article>
+                    <article class="support-card donation-card compact-donation compact-box">
+                        <p class="eyebrow">Support</p>
+                        <h2>후원하기</h2>
+                        <p class="support-copy">ONE STUDIO를 본격적으로 확장해 나가고자 합니다.<br>여러분의 후원은 개발 및 유지해 나가는 과정에서 큰 힘이 됩니다.</p>
+                        <button type="button" class="pay-button kakao kakao-pay-button" id="kakaoPayDonationButton"><span class="pay-badge">Pay</span>카카오페이로 후원하기</button>
+                    </article>
+                </div>
+
+            <article id="join" class="join-card">
+                    <div>
+                        <p class="eyebrow">Join Us</p>
+                        <h2>OS의 여정에 함께 하세요.</h2>
+                        <p>ONE STUDIO에서는 틀을 깨고 나만의 것을 만드는 과정에 함께할 분을 기다리고 있습니다.</p>
+                    </div>
+                    <a class="primary-btn large" href="mailto:yong6330@onestudio.kr?subject=ONE%20STUDIO%20Join%20Us&body=%EC%9D%B4%EB%A6%84%3A%0A%EC%97%B0%EB%9D%BD%EC%B2%98%3A%0A%EC%86%8C%EC%86%8D%3A%0A%ED%95%A8%EA%BB%98%ED%95%98%EA%B3%A0%20%EC%8B%B6%EC%9D%80%20%EB%B6%84%EC%95%BC%3A%0A%EA%B0%84%EB%8B%A8%ED%95%9C%20%EC%86%8C%EA%B0%9C%3A">문의하기</a>
+                </article>
+</div>
+        </section>
+
+        <section class="content-section start-now-section">
+            <div class="start-now-card">
+                <p class="eyebrow">Start Layoutstudio</p>
+                <h2>자, 이제 시작해볼까요?</h2>
+                <p>도면을 불러오고, 실측 기준으로 공간을 맞춘 뒤 원하는 가구 배치를 마음껏 실험해보세요.</p>
+                <a class="primary-btn large" href="./studio.html">Studio 입장하기</a>
+            </div>
+        </section>
+    </main>
+
+    <footer class="landing-footer">
+        <div class="footer-identity-block">
+            <strong>ONE STUDIO</strong>
+            <div><span>Layoutstudio SPACE</span><small>Version v0.1.0-alpha</small></div>
+        </div>
+        <div class="footer-right-stack">
+            <p class="footer-copy">Copyright 2026 ONESTUDIO. All rights reserved.</p>
+            <div class="footer-link-row">
+                <button type="button" data-doc-modal="privacy">개인정보처리방침</button>
+                <button type="button" data-doc-modal="guide">이용 안내</button>
+                <button type="button" data-doc-modal="license">오픈소스 라이선스</button>
+                <button type="button" data-doc-modal="creator">제작자 정보</button>
+            </div>
+        </div>
+    </footer>
+
+    <div class="doc-modal" id="docModal" aria-hidden="true">
+        <div class="doc-modal-backdrop" data-close-modal></div>
+        <section class="doc-modal-panel" role="dialog" aria-modal="true" aria-labelledby="docModalTitle">
+            <button type="button" class="doc-modal-close" data-close-modal aria-label="닫기">×</button>
+            <p class="eyebrow" id="docModalKicker">Layoutstudio</p>
+            <h2 id="docModalTitle">문서</h2>
+            <div id="docModalBody" class="doc-modal-body"></div>
+        </section>
+    </div>
+
+    <script>
+        if ('scrollRestoration' in history) { history.scrollRestoration = 'manual'; }
+        window.addEventListener('pageshow', () => { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); });
+        const root = document.documentElement;
+        window.addEventListener('pointermove', (event) => {
+            root.style.setProperty('--mouse-x', `${event.clientX}px`);
+            root.style.setProperty('--mouse-y', `${event.clientY}px`);
+        }, { passive: true });
+
+        const floorplan = document.getElementById('mockFloorplan');
+        let activeNativeDrag = null;
+        floorplan?.addEventListener('dragover', (event) => {
+            if (!activeNativeDrag) return;
+            event.preventDefault();
+            activeNativeDrag.move(event.clientX, event.clientY);
+        });
+        floorplan?.addEventListener('drop', (event) => {
+            if (!activeNativeDrag) return;
+            event.preventDefault();
+            activeNativeDrag.move(event.clientX, event.clientY);
+            activeNativeDrag.item.classList.remove('dragging');
+            activeNativeDrag = null;
+        });
+        floorplan?.querySelectorAll('[data-drag-item="true"]').forEach((item) => {
+            item.setAttribute('draggable', 'true');
+            const moveItem = (clientX, clientY, panel, rect, offsetX, offsetY) => {
+                const maxX = panel.width - rect.width;
+                const maxY = panel.height - rect.height;
+                const nextX = Math.min(Math.max(clientX - panel.left - offsetX, 8), maxX - 8);
+                const nextY = Math.min(Math.max(clientY - panel.top - offsetY, 8), maxY - 8);
+                item.style.setProperty('left', `${nextX}px`, 'important');
+                item.style.setProperty('top', `${nextY}px`, 'important');
+                item.style.setProperty('right', 'auto', 'important');
+                item.style.setProperty('bottom', 'auto', 'important');
+            };
+            const startDrag = (event, bindMove, bindStop, release) => {
+                const panel = floorplan.getBoundingClientRect();
+                const rect = item.getBoundingClientRect();
+                const offsetX = event.clientX - rect.left;
+                const offsetY = event.clientY - rect.top;
+                const move = (moveEvent) => {
+                    moveEvent.preventDefault();
+                    moveItem(moveEvent.clientX, moveEvent.clientY, panel, rect, offsetX, offsetY);
+                };
+                const stop = () => {
+                    release?.();
+                    bindMove(false, move);
+                    bindStop(false, stop);
+                };
+                item.classList.add('dragging');
+                bindMove(true, move);
+                bindStop(true, stop);
+            };
+            item.addEventListener('pointerdown', (event) => {
+                event.preventDefault();
+                item.setPointerCapture?.(event.pointerId);
+                startDrag(
+                    event,
+                    (on, move) => item[on ? 'addEventListener' : 'removeEventListener']('pointermove', move),
+                    (on, stop) => {
+                        item[on ? 'addEventListener' : 'removeEventListener']('pointerup', stop);
+                        item[on ? 'addEventListener' : 'removeEventListener']('pointercancel', stop);
+                    },
+                    () => {
+                        item.releasePointerCapture?.(event.pointerId);
+                        item.classList.remove('dragging');
+                    }
+                );
+            });
+            item.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                startDrag(
+                    event,
+                    (on, move) => document[on ? 'addEventListener' : 'removeEventListener']('mousemove', move),
+                    (on, stop) => document[on ? 'addEventListener' : 'removeEventListener']('mouseup', stop),
+                    () => item.classList.remove('dragging')
+                );
+            });
+            let nativeDrag = null;
+            item.addEventListener('dragstart', (event) => {
+                const panel = floorplan.getBoundingClientRect();
+                const rect = item.getBoundingClientRect();
+                nativeDrag = {
+                    panel,
+                    rect,
+                    offsetX: event.clientX - rect.left,
+                    offsetY: event.clientY - rect.top
+                };
+                activeNativeDrag = {
+                    item,
+                    move: (clientX, clientY) => moveItem(clientX, clientY, nativeDrag.panel, nativeDrag.rect, nativeDrag.offsetX, nativeDrag.offsetY)
+                };
+                item.classList.add('dragging');
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', item.textContent.trim());
+            });
+            item.addEventListener('drag', (event) => {
+                if (!nativeDrag || !event.clientX || !event.clientY) return;
+                moveItem(event.clientX, event.clientY, nativeDrag.panel, nativeDrag.rect, nativeDrag.offsetX, nativeDrag.offsetY);
+            });
+            item.addEventListener('dragend', (event) => {
+                if (nativeDrag && event.clientX && event.clientY) {
+                    moveItem(event.clientX, event.clientY, nativeDrag.panel, nativeDrag.rect, nativeDrag.offsetX, nativeDrag.offsetY);
+                }
+                nativeDrag = null;
+                activeNativeDrag = null;
+                item.classList.remove('dragging');
+            });
+        });
+
+
+        const useDemoPanel = document.getElementById('useDemoPanel');
+        const useStepCards = document.querySelectorAll('[data-demo-step]');
+        let useDemoTimer = null;
+        const resetUseDemo = () => {
+            clearTimeout(useDemoTimer);
+            useDemoTimer = null;
+            useDemoPanel?.classList.remove('is-loading');
+            useDemoPanel?.setAttribute('data-active-step', '0');
+            useStepCards.forEach((other) => other.classList.remove('is-active'));
+        };
+        useStepCards.forEach((card) => {
+            const activate = () => {
+                const nextStep = card.dataset.demoStep || '0';
+                clearTimeout(useDemoTimer);
+                useStepCards.forEach((other) => other.classList.toggle('is-active', other === card));
+                useDemoPanel?.classList.add('is-loading');
+                useDemoTimer = setTimeout(() => {
+                    useDemoPanel?.setAttribute('data-active-step', nextStep);
+                    useDemoPanel?.classList.remove('is-loading');
+                }, 620);
+            };
+            card.addEventListener('mouseenter', activate);
+            card.addEventListener('focus', activate);
+            card.addEventListener('click', activate);
+        });
+        document.getElementById('useStepGrid')?.addEventListener('mouseleave', resetUseDemo);
+        document.getElementById('useDemoPanel')?.addEventListener('mouseleave', resetUseDemo);
+
+        const donationButton = document.getElementById('kakaoPayDonationButton');
+        if (donationButton) {
+            donationButton.addEventListener('click', async () => {
+                alert('후원 링크를 준비 중입니다.');
+            });
+        }
+
+        const docs = {
+            privacy: {
+                title: '개인정보처리방침',
+                body: `<h3>저장 방식</h3><p>현재 v0.1.0-alpha는 서버 DB 없이 브라우저 LocalStorage와 사용자가 내보내는 JSON 파일을 중심으로 동작합니다.</p><h3>저장될 수 있는 정보</h3><p>워크스페이스명, 도면명, 도면 이미지, 기준 영역, 실측 크기, 가구 목록, 배치 좌표, 메모, 로컬 계정 식별 정보가 브라우저에 저장될 수 있습니다.</p><h3>삭제와 문의</h3><p>앱 내 삭제 기능 또는 브라우저 사이트 데이터 삭제로 정보를 지울 수 있습니다. 문의는 yong6330@onestudio.kr로 보내주세요.</p>`
+            },
+            guide: {
+                title: '이용 안내',
+                body: `<h3>기본 흐름</h3><p>새 워크스페이스를 만들고, 도면 이미지를 업로드한 뒤 기준 영역과 실제 크기를 맞춥니다. 이후 가구 보관함에서 가구를 추가하고 도면 위에서 배치를 검토합니다.</p><h3>현재 한계</h3><p>도면 구조를 완전 자동으로 인식하지 않습니다. 사용자가 기준 영역과 실측 크기를 직접 확인해야 합니다.</p>`
+            },
+            license: {
+                title: '오픈소스 라이선스',
+                body: `<h3>주요 라이브러리</h3><p><strong>Fabric.js</strong> · MIT · 2D 캔버스와 객체 배치에 사용</p><p><strong>Tesseract.js</strong> · Apache-2.0 · OCR 보조 분석에 사용</p><p><strong>Lucide</strong> · ISC · UI 아이콘에 사용</p><p><strong>Pretendard</strong> · OFL 계열 · 화면 폰트에 사용</p><h3>레퍼런스 원칙</h3><p>GPL 또는 라이선스가 불명확한 코드는 직접 포함하지 않으며, 허용 범위 안에서 구조와 구현 패턴을 참고합니다.</p>`
+            },
+            creator: {
+                title: '제작자 정보',
+                body: `<h3>ONE STUDIO · 용석희 / YONG Seokhee</h3><p>연세대학교 미래캠퍼스 소프트웨어학부 24학번<br>YONSEI University MIRAE CAMPUS SW '24</p><p>Layoutstudio는 ONE STUDIO 패밀리 서비스로 기획한 개인 프로젝트이며, 개발 보조 도구로 OpenAI ChatGPT와 Codex를 활용했습니다.</p><p>문의: yong6330@onestudio.kr / yong6330@yonsei.ac.kr</p>`
+            }
+        };
+        const modal = document.getElementById('docModal');
+        document.querySelectorAll('[data-doc-modal]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const doc = docs[button.dataset.docModal];
+                if (!doc) return;
+                document.getElementById('docModalTitle').textContent = doc.title;
+                document.getElementById('docModalBody').innerHTML = doc.body;
+                modal.classList.add('open');
+                modal.setAttribute('aria-hidden', 'false');
+            });
+        });
+        document.querySelectorAll('[data-close-modal]').forEach((closeButton) => {
+            closeButton.addEventListener('click', () => {
+                modal.classList.remove('open');
+                modal.setAttribute('aria-hidden', 'true');
+            });
+        });
+    </script>
+</body>
+</html>

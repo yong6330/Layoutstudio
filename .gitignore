@@ -1,0 +1,20 @@
+config/api/*.local.json
+.DS_Store
+__MACOSX/
+
+# Local / private config
+config/api/payment.local.json
+*.local.json
+.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+__MACOSX/
+
+# Local backups / references
+backups/
+_backups/
+_reference_bank/
+_Reference_bank/

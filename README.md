@@ -20,8 +20,6 @@ CDN으로 Fabric.js, Tesseract.js, Lucide 아이콘을 불러오므로 인터넷
 - `styles/app.css`
 - `src/app.js`
 - `README.md`
-- `CHANGELOG.md`
-- `.env.example`
 - `docs/`
 - `supabase/schema.sql`
 
@@ -52,7 +50,6 @@ CDN으로 Fabric.js, Tesseract.js, Lucide 아이콘을 불러오므로 인터넷
 
 ## 환경변수
 
-현재 정적 알파는 운영 DB에 직접 연결하지 않습니다. 운영 저장을 붙일 때는 `.env.example`을 참고해 브라우저에 노출 가능한 공개 키만 사용하고, 서버 전용 비밀 키는 절대 프론트엔드에 포함하지 마세요.
 
 ## DB 설정 후보
 
